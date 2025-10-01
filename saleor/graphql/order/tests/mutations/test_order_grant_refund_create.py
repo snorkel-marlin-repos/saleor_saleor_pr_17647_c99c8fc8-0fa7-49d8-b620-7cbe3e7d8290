@@ -102,31 +102,15 @@ mutation OrderGrantRefundCreate(
 
 @pytest.mark.parametrize("reason", ["", "Reason", None])
 def test_grant_refund_by_user(
-    reason,
-    staff_api_client,
-    permission_manage_orders,
-    order,
-    transaction_item_generator,
+    reason, staff_api_client, permission_manage_orders, order
 ):
     # given
     order_id = to_global_id_or_none(order)
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-
     amount = Decimal("10.00")
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
-
     variables = {
         "id": order_id,
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
 
     # when
@@ -166,30 +150,18 @@ def test_grant_refund_by_user(
         == OrderGrantedRefundStatusEnum.NONE.name
     )
     assert granted_refund_assigned_to_order["transactionEvents"] == []
-    assert granted_refund_assigned_to_order["transaction"]["id"] == transaction_item_id
+    assert not granted_refund_assigned_to_order["transaction"]
 
 
 @pytest.mark.parametrize("reason", ["", "Reason", None])
-def test_grant_refund_by_app(
-    reason, app_api_client, permission_manage_orders, order, transaction_item_generator
-):
+def test_grant_refund_by_app(reason, app_api_client, permission_manage_orders, order):
     # given
     order_id = to_global_id_or_none(order)
     app_api_client.app.permissions.set([permission_manage_orders])
     amount = Decimal("10.00")
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
 
     # when
@@ -222,29 +194,17 @@ def test_grant_refund_by_app(
 
     assert granted_refund["status"] == OrderGrantedRefundStatusEnum.NONE.name
     assert granted_refund["transactionEvents"] == []
-    assert granted_refund["transaction"]["id"] == transaction_item_id
+    assert not granted_refund["transaction"]
 
 
-def test_grant_refund_by_app_missing_permission(
-    app_api_client, order, transaction_item_generator
-):
+def test_grant_refund_by_app_missing_permission(app_api_client, order):
     # given
     order_id = to_global_id_or_none(order)
     amount = Decimal("10.00")
     reason = "Granted refund reason."
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
 
     # when
@@ -254,26 +214,14 @@ def test_grant_refund_by_app_missing_permission(
     assert_no_permission(response)
 
 
-def test_grant_refund_by_user_missing_permission(
-    staff_api_client, order, transaction_item_generator
-):
+def test_grant_refund_by_user_missing_permission(staff_api_client, order):
     # given
     order_id = to_global_id_or_none(order)
     amount = Decimal("10.00")
     reason = "Granted refund reason."
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
 
     # when
@@ -283,26 +231,14 @@ def test_grant_refund_by_user_missing_permission(
     assert_no_permission(response)
 
 
-def test_grant_refund_incorrect_order_id(
-    staff_api_client, permission_manage_orders, transaction_item_generator, order
-):
+def test_grant_refund_incorrect_order_id(staff_api_client, permission_manage_orders):
     # given
     staff_api_client.user.user_permissions.add(permission_manage_orders)
     amount = Decimal("10.00")
     reason = "Granted refund reason."
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": "wrong-id",
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
 
     # when
@@ -319,28 +255,14 @@ def test_grant_refund_incorrect_order_id(
 
 
 def test_grant_refund_with_only_include_grant_refund_for_shipping(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
-    order = order_with_lines
-    order_id = to_global_id_or_none(order)
+    order_id = to_global_id_or_none(order_with_lines)
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    amount = Decimal("20")
-    transaction_item = transaction_item_generator(
-        charged_value=amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
-        "input": {
-            "grantRefundForShipping": True,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"grantRefundForShipping": True},
     }
 
     # when
@@ -369,10 +291,7 @@ def test_grant_refund_with_only_include_grant_refund_for_shipping(
 
 
 def test_grant_refund_with_only_lines(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
     order = order_with_lines
@@ -380,13 +299,6 @@ def test_grant_refund_with_only_lines(
     first_line = order.lines.first()
     staff_api_client.user.user_permissions.add(permission_manage_orders)
 
-    charged_amount = Decimal("20.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     expected_reason = "Reason"
     variables = {
         "id": order_id,
@@ -397,8 +309,7 @@ def test_grant_refund_with_only_lines(
                     "quantity": 1,
                     "reason": expected_reason,
                 },
-            ],
-            "transactionId": transaction_item_id,
+            ]
         },
     }
 
@@ -437,29 +348,18 @@ def test_grant_refund_with_only_lines(
 
 
 def test_grant_refund_with_include_grant_refund_for_shipping_and_lines(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
     first_line = order.lines.first()
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    charged_amount = Decimal("30.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
         "input": {
             "grantRefundForShipping": True,
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 1}],
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -501,22 +401,13 @@ def test_grant_refund_with_include_grant_refund_for_shipping_and_lines(
 
 
 def test_grant_refund_with_provided_lines_shipping_and_amount(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
     first_line = order.lines.first()
     expected_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=expected_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     staff_api_client.user.user_permissions.add(permission_manage_orders)
     variables = {
         "id": order_id,
@@ -524,7 +415,6 @@ def test_grant_refund_with_provided_lines_shipping_and_amount(
             "grantRefundForShipping": True,
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 1}],
             "amount": expected_amount,
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -564,27 +454,16 @@ def test_grant_refund_with_provided_lines_shipping_and_amount(
 
 
 def test_grant_refund_without_lines_and_amount_and_grant_for_shipping(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    charged_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
         "input": {
             "reason": "Reason",
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -605,29 +484,18 @@ def test_grant_refund_without_lines_and_amount_and_grant_for_shipping(
 
 
 def test_grant_refund_with_incorrect_line_id(
-    staff_api_client,
-    permission_manage_orders,
-    order_with_lines,
-    transaction_item_generator,
+    staff_api_client, permission_manage_orders, order_with_lines
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
-    charged_amount = Decimal("10.0")
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
         "input": {
             "lines": [
                 {"id": graphene.Node.to_global_id("OrderLine", 1), "quantity": 1}
             ],
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -654,7 +522,6 @@ def test_grant_refund_with_line_that_belongs_to_another_order(
     permission_manage_orders,
     order_with_lines,
     order_with_lines_for_cc,
-    transaction_item_generator,
 ):
     # given
     order = order_with_lines
@@ -662,18 +529,10 @@ def test_grant_refund_with_line_that_belongs_to_another_order(
     another_order_id = to_global_id_or_none(another_order)
     first_line = order.lines.first()
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    charged_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": another_order_id,
         "input": {
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 1}],
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -699,25 +558,16 @@ def test_grant_refund_with_bigger_quantity_than_available(
     staff_api_client,
     permission_manage_orders,
     order_with_lines,
-    transaction_item_generator,
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
     first_line = order.lines.first()
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    charged_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
         "input": {
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 100}],
-            "transactionId": transaction_item_id,
         },
     }
 
@@ -746,24 +596,15 @@ def test_grant_refund_with_refund_for_shipping_already_processed(
     staff_api_client,
     permission_manage_orders,
     order_with_lines,
-    transaction_item_generator,
 ):
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    charged_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
     variables = {
         "id": order_id,
         "input": {
             "grantRefundForShipping": True,
-            "transactionId": transaction_item_id,
         },
     }
     order.granted_refunds.create(shipping_costs_included=True)
@@ -788,7 +629,6 @@ def test_grant_refund_with_lines_and_existing_other_grant_refund(
     staff_api_client,
     permission_manage_orders,
     order_with_lines,
-    transaction_item_generator,
 ):
     # given
     order = order_with_lines
@@ -797,20 +637,11 @@ def test_grant_refund_with_lines_and_existing_other_grant_refund(
     first_line.quantity = 2
     first_line.save(update_fields=["quantity"])
 
-    charged_amount = Decimal("20.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
-
     staff_api_client.user.user_permissions.add(permission_manage_orders)
     variables = {
         "id": order_id,
         "input": {
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 1}],
-            "transactionId": transaction_item_id,
         },
     }
     granted_refund = order.granted_refunds.create(shipping_costs_included=False)
@@ -848,7 +679,6 @@ def test_grant_refund_with_lines_and_existing_other_grant_and_refund_exceeding_q
     staff_api_client,
     permission_manage_orders,
     order_with_lines,
-    transaction_item_generator,
 ):
     # given
     order = order_with_lines
@@ -857,20 +687,11 @@ def test_grant_refund_with_lines_and_existing_other_grant_and_refund_exceeding_q
     first_line.quantity = 1
     first_line.save(update_fields=["quantity"])
 
-    charged_amount = Decimal("10.0")
-    transaction_item = transaction_item_generator(
-        charged_value=charged_amount, order_id=order.id
-    )
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
-
     staff_api_client.user.user_permissions.add(permission_manage_orders)
     variables = {
         "id": order_id,
         "input": {
             "lines": [{"id": to_global_id_or_none(first_line), "quantity": 1}],
-            "transactionId": transaction_item_id,
         },
     }
     granted_refund = order.granted_refunds.create(shipping_costs_included=False)
@@ -903,26 +724,17 @@ def test_grant_refund_updates_order_charge_status(
     # given
     order = order_with_lines
     order_id = to_global_id_or_none(order)
-    amount = Decimal("10.00")
-    authorized_value = Decimal(12)
-    transaction_item = order.payment_transactions.create(
+    order.payment_transactions.create(
         charged_value=order.total.gross.amount,
-        authorized_value=authorized_value,
+        authorized_value=Decimal(12),
         currency=order_with_lines.currency,
     )
     staff_api_client.user.user_permissions.add(permission_manage_orders)
-    transaction_item_id = graphene.Node.to_global_id(
-        "TransactionItem", transaction_item.token
-    )
-
+    amount = Decimal("10.00")
     reason = "Granted refund reason."
     variables = {
         "id": order_id,
-        "input": {
-            "amount": amount,
-            "reason": reason,
-            "transactionId": transaction_item_id,
-        },
+        "input": {"amount": amount, "reason": reason},
     }
     update_order_charge_data(order)
     assert order.charge_status == OrderChargeStatusEnum.FULL.value
