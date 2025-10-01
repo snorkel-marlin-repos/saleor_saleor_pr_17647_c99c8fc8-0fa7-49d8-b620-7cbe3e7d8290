@@ -26,11 +26,11 @@ All notable, unreleased changes to this project will be documented in this file.
 - Dropped the deprecated "Stripe (Deprecated)" payment plugin. If your codebase refers to `mirumee.payments.stripe`, you will need to migrate to the supported plugin, `saleor.payments.stripe` - #17539 by @patrys
 - Change error codes related to user enumeration bad habbit. Included mutations will now not reveal information in error codes if email was already registered:
   - `AccountRegister`,
+    `AccountRegister` mutation will additionaly not return `ID` of the user.
   - `ConfirmAccount`,
   - `RequestPasswordReset`,
+    `RequestPasswordReset` will now require `channel` as input for staff users,
   - `SetPassword` - #16243 by @kadewu
-- `AccountRegister` mutation will not return `ID` of the user. - #16243 by @kadewu
-- `RequestPasswordReset` will not fail if `channel` was not provided for non-staff users. - #17540 by @kadewu
 - Require `MANAGE_ORDERS` for updating order and order line metadata - #17223 by @IKarbowiak
   - The `updateMetadata` for `Order` and `OrderLine` types requires the `MANAGE_ORDERS` permission
 - Fix updating `metadata` and `privateMetadata` in `transactionUpdate` - #17261 by @IKarbowiak
@@ -43,7 +43,6 @@ All notable, unreleased changes to this project will be documented in this file.
 - Drop `change_user_address` method from plugin manager - #17495 by @IKarbowiak
 - `DraftOrderUpdate` do not call `DRAFT_ORDER_UPDATED` anymore in case nothing changed - #17532 by @IKarbowiak
 - `OrderUpdate` mutation do not call `ORDER_UPDATED` anymore in case nothing changed - #17507 by @IKarbowiak
-- The `transactionId` argument of `OrderGrantRefundCreateInput` is now required - #17635 by @IKarbowiak
 
 ### GraphQL API
 
@@ -70,6 +69,7 @@ All notable, unreleased changes to this project will be documented in this file.
 - Expose line-level discounts through the `OrderLineDiscount` type, retrievable via the `OrderLine.discounts` API field - #17510 by @korycins
 - Introduce total field in OrderDiscount to replace the amount field, with OrderDiscount.amount now deprecated - #17510 by @korycins
 - Introduce `useLegacyLineVoucherPropagation` flag to control legacy propagation behavior for specific voucher types - #17587 - by @korycins
+- Add filterable subscriptions for checkout events (`checkoutCreated`, `checkoutUpdated`, `checkoutFullyPaid`, `checkoutMetadataUpdated`) - #17647 by @korycins
 
 ### Webhooks
 

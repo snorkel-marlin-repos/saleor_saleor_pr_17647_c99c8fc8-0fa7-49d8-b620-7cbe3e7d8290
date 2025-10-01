@@ -2,7 +2,6 @@ import graphene
 from django.conf import settings
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
 
 from .....account import models
 from .....account.error_codes import AccountErrorCode
@@ -190,41 +189,16 @@ class AccountRegister(DeprecatedModelMutation):
         return cls.success_response(instance)
 
     @classmethod
-    def _save(cls, instance: models.User) -> bool:
-        """Save a user instance with thread-race error handling.
-
-        This method attempts to save a User instance and handles possible thread race
-        that may occur due to unique constraint violations on the email field.
-
-        To keep the timing of the logic similar, the number of DB queries is the same
-        in both cases.
-        Return true when instance is saved. Return false otherwise.
-        """
-        try:
-            with transaction.atomic():
-                instance.save()
-            models.User.objects.filter(email=instance.email).first()
-            return True
-        except IntegrityError:
-            try:
-                models.User.objects.get(email=instance.email)
-                return False
-            except models.User.DoesNotExist:
-                pass
-            raise
-
-    @classmethod
     def save_and_create_task(cls, user_exists, instance, cleaned_input, context_data):
         instance.set_password(cleaned_input["password"])
         instance.is_confirmed = False
 
-        user_created = False
         if not user_exists:
-            user_created = cls._save(instance)
+            instance.save()
 
         # moving logic to async task to prevent timing attacks
         finish_creating_user.delay(
-            instance.pk if user_created else None,
+            instance.pk if not user_exists else None,
             cleaned_input.get("redirect_url"),
             cleaned_input.get("channel"),
             context_data,

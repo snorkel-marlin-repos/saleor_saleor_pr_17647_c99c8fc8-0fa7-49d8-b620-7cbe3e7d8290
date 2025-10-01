@@ -84,10 +84,12 @@ class OrderGrantRefundCreateInput(BaseInputObjectType):
             "be equal or greater than provided `amount`."
             "If `amount` is not provided in the input and calculated automatically by "
             "Saleor, the `min(calculatedAmount, transaction.chargedAmount)` will be "
-            "used. "
-            "Field required starting from Saleor 3.21." + ADDED_IN_320 + PREVIEW_FEATURE
+            "used."
+            "Field will be required starting from Saleor 3.21."
+            + ADDED_IN_320
+            + PREVIEW_FEATURE
         ),
-        required=True,
+        required=False,
     )
 
     class Meta:
